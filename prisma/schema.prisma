@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================
+// ENUMS
+// =============================
+enum Role {
+  Admin
+  Owner
+  CM
+  SM
+}
+
+enum AccountStatus {
+  active
+  unverified
+  suspended
+}
+
+// =============================
+// USERS (back-office profile data)
+// This table stores B2E-specific profile data, not passwords.
+// =============================
+model User {
+  // This ID must match the ID from BetterAuth (the 'sub' claim)
+  id            String         @id
+  email         String         @unique
+  role          Role
+  firstName     String?        @map("firstName")
+  lastName      String?        @map("lastName")
+  phone         String?        @map("phone")
+  address       String?        @map("address")
+  birthDate     DateTime?      @db.Date @map("birthDate")
+  accountStatus AccountStatus  @default(unverified) @map("accountStatus")
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("users") // Map model name to the existing table name
+}
