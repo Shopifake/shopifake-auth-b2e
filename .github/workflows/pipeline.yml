@@ -9,7 +9,8 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  packages: write
+  # Required to publish the image to the GitHub Container Registry
+  packages: write 
 
 jobs:
   build-and-deploy:
@@ -17,16 +18,57 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Set up Node.js
+      
+      # --- 1. BUILD AND TEST STEPS (Node.js) ---
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install dependencies
-        run: npm install
-      - name: Lint
-        run: npm run lint || true
-      - name: Build
-        run: npm run build
-      - name: Run tests
+      - name: Install Dependencies and Build (Running 'npm run build')
+        # We run the build here to verify everything works before Docker.
+        # Docker will then use this step for its own build phase.
+        run: |
+          npm install
+          npm run build
+      - name: Run Tests
         run: npm test || true
-      # Add deployment steps here if needed
+        
+      # --- 2. DOCKER AND GHCR DEPLOYMENT ---
+      
+      # Setup Buildx for better cache and architecture support
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      # Connect to GitHub Container Registry (GHCR)
+      # Uses the GITHUB_TOKEN automatically provided by GitHub Actions.
+      - name: Connect to GHCR (ghcr.io)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          # Authentication via the automatic token
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      # Determine Docker Image Tags
+      - name: Determine Docker Image Tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # Image format: ghcr.io/owner/repo-name
+          images: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+          tags: |
+            # Tag with short SHA for every commit
+            type=sha,format=short
+            # Tag 'latest' only if pushed to 'main' branch
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
+            
+      # Build and Push Image to GHCR
+      - name: Build and Push Docker Image (Targeting 'prod' stage of your Dockerfile)
+        uses: docker/build-push-action@v5
+        with:
+          context: . 
+          push: true
+          # Important: specifies the 'prod' target to use the final image
+          target: prod 
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
