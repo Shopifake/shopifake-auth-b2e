@@ -7,40 +7,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// =============================
-// ENUMS
-// =============================
-enum Role {
-  Admin
-  Owner
-  CM
-  SM
-}
-
-enum AccountStatus {
-  active
-  unverified
-  suspended
-}
-
-// =============================
-// USERS (back-office profile data)
-// This table stores B2E-specific profile data, not passwords.
-// =============================
 model User {
-  // This ID must match the ID from BetterAuth (the 'sub' claim)
-  id            String         @id
-  email         String         @unique
-  role          Role
-  firstName     String?        @map("firstName")
-  lastName      String?        @map("lastName")
-  phone         String?        @map("phone")
-  address       String?        @map("address")
-  birthDate     DateTime?      @db.Date @map("birthDate")
-  accountStatus AccountStatus  @default(unverified) @map("accountStatus")
-  
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id             String   @id @default(uuid())
+  email          String   @unique
+  firstName      String?
+  lastName       String?
+  phone          String?
+  address        String?
+  dateOfBirth    DateTime?
+  role           String
+  accountStatus  String
+  externalId     String? // BetterAuth external identifier
+  authUserId     String? // BetterAuth user id if needed
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  @@map("users") // Map model name to the existing table name
+  @@map("users")
 }

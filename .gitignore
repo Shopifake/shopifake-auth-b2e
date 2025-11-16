@@ -17,5 +17,3 @@ prisma/dev.db-journal
 # OS
 .DS_Store
 Thumbs.db
-
-.env

@@ -50,6 +50,30 @@ Developed with Node.js, TypeScript, Express, and Prisma (PostgreSQL).
    npm start
    ```
 
+
+## Test Strategy
+
+This project uses **Jest** for unit and integration testing. The test strategy covers:
+
+- **Middlewares:**
+   - `checkAuth`: Ensures authentication logic is correct (valid/invalid tokens, missing headers, user payload).
+   - `checkRole`: Verifies role-based access control (allowed/denied roles, unauthenticated users).
+
+- **Routes:**
+   - `users`: Tests user profile endpoints and admin actions (get, update, suspend users) with mocked database and authentication.
+   - `webhooks`: Validates webhook event handling (user creation, deletion, payload validation, secret verification).
+
+**Mocking:**
+- External dependencies (Prisma, Axios, Express) are mocked to isolate business logic and avoid side effects.
+- Environment variables are set in tests to simulate real configuration.
+
+**How to run tests:**
+```bash
+npm run test
+```
+
+All critical logic is covered by tests to ensure reliability and prevent regressions.
+
 ## Endpoints
 
 - `GET /api/users/me` — Get current user's profile
@@ -63,5 +87,4 @@ Developed with Node.js, TypeScript, Express, and Prisma (PostgreSQL).
 - `DELETE /api/users/:id` — Suspend/deactivate a user
 
 **Other:**
-- `POST /api/webhooks/sync` — Webhook for BetterAuth user sync
 - `GET /healthz` — Healthcheck for service and database

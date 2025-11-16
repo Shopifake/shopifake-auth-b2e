@@ -4,11 +4,11 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 
 // Import Routers
-import webhookRoutes from './routes/webhooks';
+// Removed webhook routes as per the requirement
 import userRoutes from './routes/users';
 
 // Import Middleware
-import checkAuth from './middleware/checkAuth';
+import { checkAuth } from './middleware/checkAuth';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,10 +16,6 @@ const prisma = new PrismaClient();
 
 // Middleware to parse incoming JSON bodies (essential for both routes and webhooks)
 app.use(express.json());
-
-// --- Public Routes (Webhooks) ---
-// Webhooks bypass standard authentication but use their own secret check
-app.use('/api/webhooks', webhookRoutes);
 
 // --- Protected Routes ---
 // All routes defined below will automatically run the checkAuth middleware
