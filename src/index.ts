@@ -30,10 +30,11 @@ app.get('/healthz', async (req, res) => {
   } catch (err) {
     dbStatus = 'unavailable';
   }
-  res.status(dbStatus === 'available' ? 200 : 503).json({
-    status: 'ok',
+  const isHealthy = dbStatus === 'available';
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? 'UP' : 'DOWN',
     db: dbStatus,
-    service: 'up'
+    service: isHealthy ? 'up' : 'down'
   });
 });
 
