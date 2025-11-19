@@ -1,10 +1,7 @@
-process.env.BETTER_AUTH_ME_URL = 'http://fake-url/me';
 import { checkAuth } from './checkAuth';
 import { Request, Response, NextFunction } from 'express';
-import axios from 'axios';
 
 jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('checkAuth middleware', () => {
   let req: Partial<Request>;

@@ -13,7 +13,7 @@ export function checkAuth(req: Request, res: Response, next: NextFunction) {
     const payload = jwt.verify(token, SECRET);
     req.user = payload as any;
     next();
-  } catch (err) {
+  } catch {
     return res.status(401).json({ error: 'Token verification failed' });
   }
 }

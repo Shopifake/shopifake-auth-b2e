@@ -11,9 +11,14 @@ CMD ["npm", "run", "dev"]
 
 # ---- Build image ----
 FROM base AS build
-COPY . .
+COPY package*.json ./
+COPY tsconfig.json ./
+COPY prisma ./prisma
+COPY src ./src
+COPY eslint.config.js ./
 RUN npm install --production=false
 RUN npx prisma generate
+RUN npm run lint
 RUN npm run build
 
 # ---- Production image ----
