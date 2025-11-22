@@ -1,26 +1,34 @@
+// prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
-  id             String   @id @default(uuid())
-  email          String   @unique
-  firstName      String?
-  lastName       String?
-  phone          String?
-  address        String?
-  dateOfBirth    DateTime?
-  role           String
-  accountStatus  String
-  externalId     String? // BetterAuth external identifier
-  authUserId     String? // BetterAuth user id if needed
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
+  id              String    @id @default(uuid())
+  email           String    @unique
+  password        String?
+  firstName       String?
+  lastName        String?
+  phone           String?
+  address         String?
+  dateOfBirth     DateTime?
+  
+  role            String    @default("Owner")
+  accountStatus   String    @default("pending_verification")
+  
+  deletionReason  String?
+  deletedAt       DateTime?
+  
+  externalId      String?
+  authUserId      String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
   @@map("users")
 }

@@ -1,9 +1,7 @@
 // src/routes/users.ts
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import checkRole from '../middleware/checkRole';
+import { prisma } from '../lib/prisma.config';
 
-const prisma = new PrismaClient();
 const router = Router();
 
 // --- Logged-in User Profile Routes ---
@@ -12,21 +10,37 @@ const router = Router();
 router.get('/me', async (req: Request, res: Response) => {
   try {
     const myProfile = await prisma.user.findUnique({
-      where: { id: req.user!.id }
+      where: { id: req.user!.id },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        address: true,
+        dateOfBirth: true,
+        role: true,
+        accountStatus: true,
+        createdAt: true,
+        updatedAt: true
+      }
     });
+    
     if (!myProfile) {
       return res.status(404).json({ error: 'Profile not found. Contact an administrator.' });
     }
+    
     res.json(myProfile);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
 });
 
-// PUT /api/users/me: Update the current user's own profile (e.g., name, phone)
+// PUT /api/users/me: Update the current user's own profile (UC-A2)
 router.put('/me', async (req: Request, res: Response) => {
   try {
     const { firstName, lastName, phone, address, dateOfBirth } = req.body;
+    
     const updatedProfile = await prisma.user.update({
       where: { id: req.user!.id },
       data: {
@@ -34,103 +48,37 @@ router.put('/me', async (req: Request, res: Response) => {
         lastName,
         phone,
         address,
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null
       }
     });
+    
     res.json(updatedProfile);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
 });
 
-// --- Administrator Routes (Requires 'Admin' Role) ---
-
-// GET /api/users: Get ALL users (Requires Admin)
-router.get('/', checkRole(['Admin']), async (req: Request, res: Response) => {
+// DELETE /api/users/me: Delete own account (RGPD - UC-A3)
+router.delete('/me', async (req: Request, res: Response) => {
   try {
-    const users = await prisma.user.findMany();
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
-  }
-});
-
-// POST /api/users: Create a new user (Requires Admin)
-router.post('/', checkRole(['Admin']), async (req: Request, res: Response) => {
-  try {
-    const { email, firstName, lastName, phone, address, dateOfBirth, role, accountStatus } = req.body;
-    // Basic validation
-    if (!email || !role || !accountStatus) {
-      return res.status(400).json({ error: 'Missing required fields: email, role, accountStatus' });
-    }
-    // Email format validation
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
-      return res.status(400).json({ error: 'Invalid email format' });
-    }
-    const newUser = await prisma.user.create({
-      data: {
-        email,
-        firstName,
-        lastName,
-        phone,
-        address,
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-        role,
-        accountStatus
-      }
-    });
-    res.status(201).json(newUser);
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
-  }
-});
-
-// GET /api/users/:id: Get a user by ID (Requires Admin)
-router.get('/:id', checkRole(['Admin']), async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const user = await prisma.user.findUnique({ where: { id } });
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
-  }
-});
-
-// PUT /api/users/:id: Update another user's profile (Role or Status changes)
-router.put('/:id', checkRole(['Admin']), async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { role, accountStatus, firstName, lastName, phone, address, dateOfBirth } = req.body;
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: {
-        role,
-        accountStatus,
-        firstName,
-        lastName,
-        phone,
-        address,
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined
-      }
-    });
-    res.json(updatedUser);
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
-  }
-});
-
-// DELETE /api/users/:id: Suspend/Deactivate a user
-router.delete('/:id', checkRole(['Admin']), async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
+    const { reason } = req.body;
+    
+    // Anonymize or delete user (RGPD compliance)
     await prisma.user.update({
-      where: { id },
-      data: { accountStatus: 'suspended' }
+      where: { id: req.user!.id },
+      data: {
+        email: `deleted_${req.user!.id}@anonymized.com`,
+        firstName: 'Deleted',
+        lastName: 'User',
+        phone: null,
+        address: null,
+        accountStatus: 'deleted',
+        deletionReason: reason,
+        deletedAt: new Date()
+      }
     });
-    res.status(200).json({ message: 'User successfully suspended' });
+    
+    res.status(200).json({ message: 'Account successfully deleted' });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }

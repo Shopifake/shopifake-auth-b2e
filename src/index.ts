@@ -1,27 +1,25 @@
 // src/index.ts
-import 'dotenv/config'; // Loads environment variables from .env
+import 'dotenv/config';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './lib/prisma.config';
 
-// Import Routers
-// Removed webhook routes as per the requirement
 import userRoutes from './routes/users';
-
-// Import Middleware
+import authRoutes from './auth';
 import { checkAuth } from './middleware/checkAuth';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const prisma = new PrismaClient();
+const PORT = process.env.PORT || 3001;
 
-// Middleware to parse incoming JSON bodies (essential for both routes and webhooks)
+// --- Middleware ---
 app.use(express.json());
 
-// --- Protected Routes ---
-// All routes defined below will automatically run the checkAuth middleware
+app.set('trust proxy', true);
+
+// --- Routes ---
+app.use('/api/auth', authRoutes);
 app.use('/api/users', checkAuth, userRoutes);
 
-// --- Healthcheck route for Kubernetes ---
+// --- Healthcheck ---
 app.get('/healthz', async (req, res) => {
   let dbStatus = 'unknown';
   try {
@@ -34,15 +32,44 @@ app.get('/healthz', async (req, res) => {
   res.status(isHealthy ? 200 : 503).json({
     status: isHealthy ? 'UP' : 'DOWN',
     db: dbStatus,
-    service: isHealthy ? 'up' : 'down'
+    service: 'user-auth-service'
   });
 });
 
-// Root test route
 app.get('/', (req, res) => {
-  res.send('Shopifake BetterAuth Microservice is running.');
+  res.json({ 
+    service: 'Shopifake User/Auth Microservice',
+    version: '1.0.0',
+    endpoints: {
+      auth: '/api/auth',
+      users: '/api/users',
+      health: '/healthz'
+    }
+  });
+});
+
+// Error handling
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Error:', err);
+  res.status(500).json({ 
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// Handle 404
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route not found' });
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Microservice started on http://localhost:${PORT}`);
+  console.log(`🚀 User Service on http://localhost:${PORT}`);
+  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, closing server...');
+  await prisma.$disconnect();
+  process.exit(0);
 });

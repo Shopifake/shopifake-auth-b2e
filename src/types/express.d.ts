@@ -5,7 +5,9 @@ declare global {
       user?: {
         id: string;
         email: string;
-        roles: string[];
+        role: 'Owner' | 'CM' | 'SM'; // Single role instead of array
+        firstName?: string;
+        lastName?: string;
       };
     }
   }

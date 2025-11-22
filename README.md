@@ -20,7 +20,6 @@ Developed with Node.js, TypeScript, Express, and Prisma (PostgreSQL).
 ## How It Works
 
 - **Authentication:** Protected routes require a valid BetterAuth JWT token.
-- **Webhooks:** The `/api/webhooks/sync` endpoint receives events from BetterAuth to create, update, or suspend users.
 - **Database:** Uses Prisma ORM to interact with a PostgreSQL database.
 - **Healthcheck:** The `/healthz` endpoint checks if the service and database are running.
 
@@ -50,7 +49,6 @@ Developed with Node.js, TypeScript, Express, and Prisma (PostgreSQL).
    npm start
    ```
 
-
 ## Test Strategy
 
 This project uses **Jest** for unit and integration testing. The test strategy covers:
@@ -61,7 +59,6 @@ This project uses **Jest** for unit and integration testing. The test strategy c
 
 - **Routes:**
    - `users`: Tests user profile endpoints and admin actions (get, update, suspend users) with mocked database and authentication.
-   - `webhooks`: Validates webhook event handling (user creation, deletion, payload validation, secret verification).
 
 **Mocking:**
 - External dependencies (Prisma, Axios, Express) are mocked to isolate business logic and avoid side effects.
@@ -76,15 +73,11 @@ All critical logic is covered by tests to ensure reliability and prevent regress
 
 ## Endpoints
 
+- `GET /api/auth/*` — Authentication endpoints (login, token validation, etc.)
 - `GET /api/users/me` — Get current user's profile
 - `PUT /api/users/me` — Update current user's profile
-
-**Admin endpoints (require Admin role):**
-- `GET /api/users` — List all users
-- `POST /api/users` — Create a new user
-- `GET /api/users/:id` — Get a user by ID
-- `PUT /api/users/:id` — Update a user (role, status, profile)
-- `DELETE /api/users/:id` — Suspend/deactivate a user
+- `DELETE /api/users/me` — Delete current user's profile
 
 **Other:**
 - `GET /healthz` — Healthcheck for service and database
+- `GET /` — Service info and available endpoints
