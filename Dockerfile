@@ -22,7 +22,7 @@ RUN npm run lint
 RUN npm run build
 
 # ---- Production image ----
-FROM node:20-bullseye AS prod
+FROM node:22-bullseye AS prod
 WORKDIR /app
 ENV PORT=3000
 COPY --from=build /app/dist ./dist
