@@ -2,13 +2,15 @@
 import { PrismaClient } from '@prisma/client';
 import { mockDeep, mockReset } from 'jest-mock-extended';
 
-// Mock Prisma Client
+// Create mock prisma
+export const prismaMock = mockDeep<PrismaClient>();
+
+// Mock the prisma config module
 jest.mock('../lib/prisma.config', () => ({
   __esModule: true,
-  prisma: mockDeep<PrismaClient>(),
+  prisma: prismaMock,
 }));
 
 beforeEach(() => {
-  const { prisma } = require('../lib/prisma.config');
-  mockReset(prisma);
+  mockReset(prismaMock);
 });

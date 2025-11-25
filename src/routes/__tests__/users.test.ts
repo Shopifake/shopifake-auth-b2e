@@ -22,7 +22,6 @@ describe('User Routes', () => {
       req.user = {
         id: 'test-user-id',
         email: 'test@example.com',
-        role: 'Owner',
       };
       next();
     });
@@ -43,9 +42,6 @@ describe('User Routes', () => {
         lastName: 'Doe',
         phone: '+1234567890',
         address: '123 Main St',
-        dateOfBirth: new Date('1990-01-01'),
-        role: 'Owner',
-        accountStatus: 'active',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -97,16 +93,12 @@ describe('User Routes', () => {
         lastName: 'Smith',
         phone: '+9876543210',
         address: '456 Oak Ave',
-        dateOfBirth: '1992-05-15',
       };
 
       const mockUpdatedUser = {
         id: 'test-user-id',
         email: 'test@example.com',
         ...updateData,
-        dateOfBirth: new Date(updateData.dateOfBirth),
-        role: 'Owner',
-        accountStatus: 'active',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -140,8 +132,6 @@ describe('User Routes', () => {
         email: 'test@example.com',
         firstName: 'UpdatedName',
         lastName: 'Doe',
-        role: 'Owner',
-        accountStatus: 'active',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -176,7 +166,6 @@ describe('User Routes', () => {
         email: 'deleted_test-user-id@anonymized.com',
         firstName: 'Deleted',
         lastName: 'User',
-        accountStatus: 'deleted',
         deletedAt: new Date(),
       };
 
@@ -196,7 +185,6 @@ describe('User Routes', () => {
           email: 'deleted_test-user-id@anonymized.com',
           firstName: 'Deleted',
           lastName: 'User',
-          accountStatus: 'deleted',
           deletionReason: 'No longer need account',
         }),
       });

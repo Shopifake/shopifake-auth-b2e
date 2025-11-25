@@ -1,32 +1,19 @@
-// src/lib/prisma.ts
-import { PrismaClient } from '@prisma/client';
-import { Pool } from 'pg';
+import { PrismaClient } from '@prisma/client'; 
 import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg'; 
 
-const connectionString = process.env.DATABASE_URL!;
+// 1. Get the connection string
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error('DATABASE_URL is not set.');
+}
+
+// 2. Instantiate the 'pg' Pool and the Prisma Adapter
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+// 3. Instantiate PrismaClient with the adapter
+const prisma = new PrismaClient({ adapter });
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    adapter,
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  });
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
-}
-
-const cleanup = async () => {
-  await prisma.$disconnect();
-  await pool.end();
-  process.exit(0);
-};
-
-process.on('SIGINT', cleanup);
-process.on('SIGTERM', cleanup);
+export { prisma };

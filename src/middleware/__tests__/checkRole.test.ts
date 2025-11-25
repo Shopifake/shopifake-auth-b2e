@@ -20,7 +20,7 @@ describe('checkRole Middleware', () => {
 
   describe('User Not Authenticated', () => {
     it('should return 403 when req.user is undefined', () => {
-      const middleware = checkRole(['Owner']);
+      const middleware = checkRole('site-123', ['Owner']);
 
       middleware(mockRequest as Request, mockResponse as Response, nextFunction);
 
@@ -33,7 +33,7 @@ describe('checkRole Middleware', () => {
 
     it('should return 403 when req.user is null', () => {
       mockRequest.user = null as any;
-      const middleware = checkRole(['CM']);
+      const middleware = checkRole('site-456', ['CM']);
 
       middleware(mockRequest as Request, mockResponse as Response, nextFunction);
 
@@ -42,15 +42,55 @@ describe('checkRole Middleware', () => {
     });
   });
 
-  describe('Valid Roles', () => {
+  describe('User Has No Access to Site', () => {
+    it('should return 403 when user has no roles array', () => {
+      mockRequest.user = {
+        id: 'user-1',
+        email: 'test@example.com',
+      };
+
+      const middleware = checkRole('site-123', ['Owner']);
+      middleware(mockRequest as Request, mockResponse as Response, nextFunction);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(403);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Access denied. You don\'t have access to this site.',
+      });
+      expect(nextFunction).not.toHaveBeenCalled();
+    });
+
+    it('should return 403 when user has roles but not for this site', () => {
+      mockRequest.user = {
+        id: 'user-2',
+        email: 'test@example.com',
+        roles: [
+          { siteId: 'site-456', role: 'Owner' },
+          { siteId: 'site-789', role: 'CM' },
+        ],
+      };
+
+      const middleware = checkRole('site-123', ['Owner']);
+      middleware(mockRequest as Request, mockResponse as Response, nextFunction);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(403);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Access denied. You don\'t have access to this site.',
+      });
+      expect(nextFunction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Valid Roles for Site', () => {
     it('should allow Owner role when Owner is required', () => {
       mockRequest.user = {
         id: 'user-1',
         email: 'owner@test.com',
-        role: 'Owner',
+        roles: [
+          { siteId: 'site-123', role: 'Owner' },
+        ],
       };
 
-      const middleware = checkRole(['Owner']);
+      const middleware = checkRole('site-123', ['Owner']);
       middleware(mockRequest as Request, mockResponse as Response, nextFunction);
 
       expect(nextFunction).toHaveBeenCalled();
@@ -61,10 +101,12 @@ describe('checkRole Middleware', () => {
       mockRequest.user = {
         id: 'user-2',
         email: 'cm@test.com',
-        role: 'CM',
+        roles: [
+          { siteId: 'site-123', role: 'CM' },
+        ],
       };
 
-      const middleware = checkRole(['CM']);
+      const middleware = checkRole('site-123', ['CM']);
       middleware(mockRequest as Request, mockResponse as Response, nextFunction);
 
       expect(nextFunction).toHaveBeenCalled();
@@ -74,10 +116,12 @@ describe('checkRole Middleware', () => {
       mockRequest.user = {
         id: 'user-3',
         email: 'sm@test.com',
-        role: 'SM',
+        roles: [
+          { siteId: 'site-123', role: 'SM' },
+        ],
       };
 
-      const middleware = checkRole(['SM']);
+      const middleware = checkRole('site-123', ['SM']);
       middleware(mockRequest as Request, mockResponse as Response, nextFunction);
 
       expect(nextFunction).toHaveBeenCalled();
@@ -87,10 +131,12 @@ describe('checkRole Middleware', () => {
       mockRequest.user = {
         id: 'user-4',
         email: 'owner@test.com',
-        role: 'Owner',
+        roles: [
+          { siteId: 'site-123', role: 'Owner' },
+        ],
       };
 
-      const middleware = checkRole(['Owner', 'CM', 'SM']);
+      const middleware = checkRole('site-123', ['Owner', 'CM', 'SM']);
       middleware(mockRequest as Request, mockResponse as Response, nextFunction);
 
       expect(nextFunction).toHaveBeenCalled();
@@ -100,25 +146,46 @@ describe('checkRole Middleware', () => {
       mockRequest.user = {
         id: 'user-5',
         email: 'cm@test.com',
-        role: 'CM',
+        roles: [
+          { siteId: 'site-123', role: 'CM' },
+        ],
       };
 
-      const middleware = checkRole(['Owner', 'CM']);
+      const middleware = checkRole('site-123', ['Owner', 'CM']);
+      middleware(mockRequest as Request, mockResponse as Response, nextFunction);
+
+      expect(nextFunction).toHaveBeenCalled();
+    });
+
+    it('should check correct site when user has multiple sites', () => {
+      mockRequest.user = {
+        id: 'user-6',
+        email: 'multi@test.com',
+        roles: [
+          { siteId: 'site-123', role: 'Owner' },
+          { siteId: 'site-456', role: 'SM' },
+          { siteId: 'site-789', role: 'CM' },
+        ],
+      };
+
+      const middleware = checkRole('site-456', ['SM']);
       middleware(mockRequest as Request, mockResponse as Response, nextFunction);
 
       expect(nextFunction).toHaveBeenCalled();
     });
   });
 
-  describe('Invalid Roles', () => {
+  describe('Invalid Roles for Site', () => {
     it('should reject CM when only Owner is allowed', () => {
       mockRequest.user = {
         id: 'user-6',
         email: 'cm@test.com',
-        role: 'CM',
+        roles: [
+          { siteId: 'site-123', role: 'CM' },
+        ],
       };
 
-      const middleware = checkRole(['Owner']);
+      const middleware = checkRole('site-123', ['Owner']);
       middleware(mockRequest as Request, mockResponse as Response, nextFunction);
 
       expect(mockResponse.status).toHaveBeenCalledWith(403);
@@ -133,10 +200,12 @@ describe('checkRole Middleware', () => {
       mockRequest.user = {
         id: 'user-7',
         email: 'sm@test.com',
-        role: 'SM',
+        roles: [
+          { siteId: 'site-123', role: 'SM' },
+        ],
       };
 
-      const middleware = checkRole(['Owner', 'CM']);
+      const middleware = checkRole('site-123', ['Owner', 'CM']);
       middleware(mockRequest as Request, mockResponse as Response, nextFunction);
 
       expect(mockResponse.status).toHaveBeenCalledWith(403);
@@ -151,10 +220,12 @@ describe('checkRole Middleware', () => {
       mockRequest.user = {
         id: 'user-8',
         email: 'owner@test.com',
-        role: 'Owner',
+        roles: [
+          { siteId: 'site-123', role: 'Owner' },
+        ],
       };
 
-      const middleware = checkRole(['CM']);
+      const middleware = checkRole('site-123', ['CM']);
       middleware(mockRequest as Request, mockResponse as Response, nextFunction);
 
       expect(mockResponse.status).toHaveBeenCalledWith(403);
@@ -167,24 +238,12 @@ describe('checkRole Middleware', () => {
       mockRequest.user = {
         id: 'user-9',
         email: 'test@test.com',
-        role: 'Owner',
+        roles: [
+          { siteId: 'site-123', role: 'Owner' },
+        ],
       };
 
-      const middleware = checkRole([]);
-      middleware(mockRequest as Request, mockResponse as Response, nextFunction);
-
-      expect(mockResponse.status).toHaveBeenCalledWith(403);
-      expect(nextFunction).not.toHaveBeenCalled();
-    });
-
-    it('should handle invalid role value', () => {
-      mockRequest.user = {
-        id: 'user-10',
-        email: 'invalid@test.com',
-        role: 'InvalidRole' as any,
-      };
-
-      const middleware = checkRole(['Owner']);
+      const middleware = checkRole('site-123', []);
       middleware(mockRequest as Request, mockResponse as Response, nextFunction);
 
       expect(mockResponse.status).toHaveBeenCalledWith(403);
@@ -195,10 +254,12 @@ describe('checkRole Middleware', () => {
       mockRequest.user = {
         id: 'user-11',
         email: 'owner@test.com',
-        role: 'owner' as any, // lowercase
+        roles: [
+          { siteId: 'site-123', role: 'owner' as any }, // lowercase
+        ],
       };
 
-      const middleware = checkRole(['Owner']);
+      const middleware = checkRole('site-123', ['Owner']);
       middleware(mockRequest as Request, mockResponse as Response, nextFunction);
 
       expect(mockResponse.status).toHaveBeenCalledWith(403);

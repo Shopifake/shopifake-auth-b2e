@@ -29,7 +29,6 @@ describe('checkAuth Middleware', () => {
       const payload = {
         id: 'user-123',
         email: 'test@example.com',
-        role: 'Owner',
         firstName: 'John',
         lastName: 'Doe',
       };
@@ -45,7 +44,6 @@ describe('checkAuth Middleware', () => {
       expect(mockRequest.user).toEqual(expect.objectContaining({
         id: 'user-123',
         email: 'test@example.com',
-        role: 'Owner',
       }));
     });
 
@@ -53,7 +51,6 @@ describe('checkAuth Middleware', () => {
       const payload = {
         id: 'user-456',
         email: 'owner@test.com',
-        role: 'Owner',
         firstName: 'Jane',
         lastName: 'Smith',
       };
@@ -65,7 +62,31 @@ describe('checkAuth Middleware', () => {
 
       checkAuth(mockRequest as Request, mockResponse as Response, nextFunction);
 
-      expect(mockRequest.user).toMatchObject(payload);
+      expect(mockRequest.user).toMatchObject({
+        id: payload.id,
+        email: payload.email,
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+      });
+      expect(nextFunction).toHaveBeenCalled();
+    });
+
+    it('should handle token without optional fields', () => {
+      const payload = {
+        id: 'user-789',
+      };
+      const token = jwt.sign(payload, SECRET);
+
+      mockRequest.headers = {
+        authorization: `Bearer ${token}`,
+      };
+
+      checkAuth(mockRequest as Request, mockResponse as Response, nextFunction);
+
+      expect(mockRequest.user).toMatchObject({
+        id: 'user-789',
+        email: '',
+      });
       expect(nextFunction).toHaveBeenCalled();
     });
   });
@@ -117,7 +138,6 @@ describe('checkAuth Middleware', () => {
       const payload = {
         id: 'user-789',
         email: 'expired@test.com',
-        role: 'CM',
       };
       const expiredToken = jwt.sign(payload, SECRET, { expiresIn: '-1s' });
 
@@ -135,8 +155,7 @@ describe('checkAuth Middleware', () => {
     });
 
     it('should return 401 for token signed with wrong secret', () => {
-      process.env.BETTER_AUTH_SECRET = 'test-secret';
-      const payload = { id: 'user-999', email: 'wrong@test.com', role: 'SM' };
+      const payload = { id: 'user-999', email: 'wrong@test.com' };
       const wrongToken = jwt.sign(payload, 'wrong-secret');
 
       mockRequest.headers = {
@@ -152,7 +171,7 @@ describe('checkAuth Middleware', () => {
 
   describe('Edge Cases', () => {
     it('should handle token with extra spaces', () => {
-      const payload = { id: 'user-111', email: 'test@test.com', role: 'Owner' };
+      const payload = { id: 'user-111', email: 'test@test.com' };
       const token = jwt.sign(payload, SECRET);
 
       mockRequest.headers = {

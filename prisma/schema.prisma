@@ -6,6 +6,18 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model UserSiteRole {
+  id      String   @id @default(uuid())
+  user    User     @relation(fields: [userId], references: [id])
+  userId  String
+
+  siteId  String 
+  role    String
+
+  @@unique([userId, siteId])
 }
 
 model User {
@@ -16,19 +28,14 @@ model User {
   lastName        String?
   phone           String?
   address         String?
-  dateOfBirth     DateTime?
-  
-  role            String    @default("Owner")
-  accountStatus   String    @default("pending_verification")
-  
   deletionReason  String?
   deletedAt       DateTime?
-  
   externalId      String?
   authUserId      String?
-  
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  
+
+  siteRoles       UserSiteRole[]
+
   @@map("users")
 }

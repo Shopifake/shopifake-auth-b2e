@@ -3,20 +3,29 @@ import { Request, Response, NextFunction } from 'express';
 
 type UserRole = 'Owner' | 'CM' | 'SM';
 
-const checkRole = (allowedRoles: UserRole[]) => {
+const checkRole = (siteId: string, allowedRoles: UserRole[]) => {
     return (req: Request, res: Response, next: NextFunction): void => {
         if (!req.user) {
             res.status(403).json({ error: 'User not authenticated' });
-            return; // ✅ Important: return void
+            return;
         }
 
-        // Check if user has one of the allowed roles
-        if (!allowedRoles.includes(req.user.role)) {
+        // Check if user has one of the allowed roles for this specific site
+        const userSiteRole = req.user.roles?.find(r => r.siteId === siteId);
+        
+        if (!userSiteRole) {
+            res.status(403).json({ 
+                error: 'Access denied. You don\'t have access to this site.',
+            });
+            return;
+        }
+
+        if (!allowedRoles.includes(userSiteRole.role as UserRole)) {
             res.status(403).json({ 
                 error: `Access denied. Required role: ${allowedRoles.join(' or ')}`,
-                userRole: req.user.role
+                userRole: userSiteRole.role
             });
-            return; // ✅ Important: return void
+            return;
         }
 
         next();

@@ -71,13 +71,23 @@ npm run test
 
 All critical logic is covered by tests to ensure reliability and prevent regressions.
 
-## Endpoints
+## Endpoints via Gateway
 
-- `GET /api/auth/*` — Authentication endpoints (login, token validation, etc.)
-- `GET /api/users/me` — Get current user's profile
-- `PUT /api/users/me` — Update current user's profile
-- `DELETE /api/users/me` — Delete current user's profile
+### Authentification
+- `POST /api/auth-b2e/register` — Register a new user
+- `POST /api/auth-b2e/login` — Login
 
-**Other:**
-- `GET /healthz` — Healthcheck for service and database
-- `GET /` — Service info and available endpoints
+### User Profile
+- `GET /api/auth-b2e/users/me` — Get current user's profile
+- `PUT /api/auth-b2e/users/me` — Update current user's profile
+- `DELETE /api/auth-b2e/users/me` — Delete current user's profile
+
+### Managed Sites (CRUD)
+- `GET /api/auth-b2e/users/me/sites` — List managed sites and roles
+- `POST /api/auth-b2e/users/me/sites` — Add a managed site with role
+- `PUT /api/auth-b2e/users/me/sites/:siteId` — Update role for a managed site
+- `DELETE /api/auth-b2e/users/me/sites/:siteId` — Remove a managed site
+
+### Other
+- `GET /api/auth-b2e/healthz` — Healthcheck for service and database
+- `GET /api/auth-b2e/` — Service info and available endpoints

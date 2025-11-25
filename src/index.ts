@@ -16,8 +16,8 @@ app.use(express.json());
 app.set('trust proxy', true);
 
 // --- Routes ---
-app.use('/api/auth', authRoutes);
-app.use('/api/users', checkAuth, userRoutes);
+app.use('/', authRoutes);
+app.use('/users', checkAuth, userRoutes);
 
 // --- Healthcheck ---
 app.get('/healthz', async (req, res) => {
@@ -41,8 +41,8 @@ app.get('/', (req, res) => {
     service: 'Shopifake User/Auth Microservice',
     version: '1.0.0',
     endpoints: {
-      auth: '/api/auth',
-      users: '/api/users',
+      auth: '/',
+      users: '/users',
       health: '/healthz'
     }
   });

@@ -1,11 +1,10 @@
-// src/types/express.d.ts
 declare global {
   namespace Express {
     interface Request {
       user?: {
         id: string;
         email: string;
-        role: 'Owner' | 'CM' | 'SM'; // Single role instead of array
+        roles?: { siteId: string; role: 'Owner' | 'CM' | 'SM' }[];
         firstName?: string;
         lastName?: string;
       };
