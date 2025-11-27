@@ -131,4 +131,78 @@ router.delete('/me/sites/:siteId', async (req: Request, res: Response) => {
   }
 });
 
+// --- Owner Site User Management ---
+
+// Middleware to check if current user is owner of the site
+async function checkSiteOwner(req: Request, res: Response, next: Function) {
+  const siteId = req.params.siteId;
+  const ownerRole = await prisma.userSiteRole.findUnique({
+    where: { userId_siteId: { userId: req.user!.id, siteId } },
+    select: { role: true }
+  });
+  if (ownerRole?.role !== 'OWNER') {
+    return res.status(403).json({ error: 'Not authorized: must be site owner.' });
+  }
+  next();
+}
+
+// GET /me/sites/:siteId/users : Get all users for a site you own
+router.get('/me/sites/:siteId/users', checkSiteOwner, async (req: Request, res: Response) => {
+  try {
+    const users = await prisma.userSiteRole.findMany({
+      where: { siteId: req.params.siteId },
+      include: { user: { select: { id: true, email: true, firstName: true, lastName: true } } }
+    });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// POST /me/sites/:siteId/users : Add a user to your site (if exists and not already assigned)
+router.post('/me/sites/:siteId/users', checkSiteOwner, async (req: Request, res: Response) => {
+  try {
+    const { userId, role } = req.body;
+    // Check user exists
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+    // Check not already assigned
+    const existing = await prisma.userSiteRole.findUnique({ where: { userId_siteId: { userId, siteId: req.params.siteId } } });
+    if (existing) return res.status(400).json({ error: 'User already has a role for this site.' });
+    // Add user
+    const entry = await prisma.userSiteRole.create({ data: { userId, siteId: req.params.siteId, role } });
+    res.status(201).json(entry);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// PUT /me/sites/:siteId/users/:userId : Change a user's role for your site
+router.put('/me/sites/:siteId/users/:userId', checkSiteOwner, async (req: Request, res: Response) => {
+  try {
+    const { role } = req.body;
+    // Only allow CM <-> SM changes
+    if (!['CM', 'SM'].includes(role)) return res.status(400).json({ error: 'Role must be CM or SM.' });
+    const entry = await prisma.userSiteRole.update({
+      where: { userId_siteId: { userId: req.params.userId, siteId: req.params.siteId } },
+      data: { role }
+    });
+    res.json(entry);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// DELETE /me/sites/:siteId/users/:userId : Remove a user from your site
+router.delete('/me/sites/:siteId/users/:userId', checkSiteOwner, async (req: Request, res: Response) => {
+  try {
+    await prisma.userSiteRole.delete({
+      where: { userId_siteId: { userId: req.params.userId, siteId: req.params.siteId } }
+    });
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
 export default router;
