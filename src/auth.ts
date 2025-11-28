@@ -62,16 +62,24 @@ router.post('/register', async (req: Request, res: Response) => {
       { expiresIn: '7d' }
     );
 
-    res.status(201).json({
-      message: 'Account created successfully. Please verify your email.',
-      token,
-      user: {
-        id: newUser.id,
-        email: newUser.email,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName
-      }
-    });
+    
+    res
+      .cookie("authToken", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      })
+      .status(201).json({
+        message: 'Account created successfully. Please verify your email.',
+        token,
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName
+        }
+      });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
@@ -117,8 +125,14 @@ router.post('/login', async (req: Request, res: Response) => {
       { expiresIn: '7d' }
     );
 
-    res.json({
-      token,
+  res
+    .cookie("authToken", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    })
+    .json({
       user: {
         id: user.id,
         email: user.email,
