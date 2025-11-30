@@ -1,4 +1,5 @@
 // src/index.ts
+import './instrumentation';
 import 'dotenv/config';
 import express from 'express';
 import { prisma } from './lib/prisma.config';
