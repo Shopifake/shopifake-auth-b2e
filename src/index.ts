@@ -2,22 +2,21 @@
 import 'dotenv/config';
 import express from 'express';
 import { prisma } from './lib/prisma.config';
-
 import userRoutes from './routes/users';
 import authRoutes from './auth';
-import { checkAuth } from './middleware/checkAuth';
+import cookieParser from 'cookie-parser';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // --- Middleware ---
 app.use(express.json());
-
+app.use(cookieParser());  // Make sure this is here!
 app.set('trust proxy', true);
 
 // --- Routes ---
 app.use('/', authRoutes);
-app.use('/users', checkAuth, userRoutes);
+app.use('/users', userRoutes);  // Removed checkAuth
 
 // --- Healthcheck ---
 app.get('/healthz', async (req, res) => {

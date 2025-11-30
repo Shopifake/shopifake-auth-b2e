@@ -1,12 +1,32 @@
 // src/routes/users.ts
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma.config';
+import jwt from 'jsonwebtoken';
 
 const router = Router();
 
+// Authentication middleware - extracts user from JWT cookie
+const authenticate = (req: Request, res: Response, next: any) => {
+  try {
+    const token = req.cookies.accessToken;
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    const decoded = jwt.verify(token, process.env.BETTER_AUTH_SECRET!) as any;
+    req.user = { id: decoded.id, email: decoded.email };
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
+// Apply authentication middleware to all routes
+router.use(authenticate);
+
 // --- Logged-in User Profile Routes ---
 
-// GET /api/users/me: Get the currently logged-in user's profile
+// GET users/me: Get the currently logged-in user's profile
 router.get('/me', async (req: Request, res: Response) => {
   try {
     const myProfile = await prisma.user.findUnique({
@@ -33,7 +53,7 @@ router.get('/me', async (req: Request, res: Response) => {
   }
 });
 
-// PUT /api/users/me: Update the current user's own profile (UC-A2)
+// PUT /users/me: Update the current user's own profile
 router.put('/me', async (req: Request, res: Response) => {
   try {
     const { firstName, lastName, phone, address } = req.body;
@@ -54,7 +74,7 @@ router.put('/me', async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /api/users/me: Delete own account (RGPD - UC-A3)
+// DELETE users/me: Delete own account (RGPD compliance)
 router.delete('/me', async (req: Request, res: Response) => {
   try {
     const { reason } = req.body;
@@ -79,7 +99,7 @@ router.delete('/me', async (req: Request, res: Response) => {
   }
 });
 
-// GET /me/sites : List of managed sites
+// GET /me/sites: List of managed sites
 router.get('/me/sites', async (req: Request, res: Response) => {
   try {
     const sites = await prisma.userSiteRole.findMany({
@@ -92,7 +112,7 @@ router.get('/me/sites', async (req: Request, res: Response) => {
   }
 });
 
-// POST /me/sites : Add a managed site
+// POST /me/sites: Add a managed site
 router.post('/me/sites', async (req: Request, res: Response) => {
   try {
     const { siteId, role } = req.body;
@@ -105,7 +125,7 @@ router.post('/me/sites', async (req: Request, res: Response) => {
   }
 });
 
-// PUT /me/sites/:siteId : Update role for a managed site
+// PUT /me/sites/:siteId: Update role for a managed site
 router.put('/me/sites/:siteId', async (req: Request, res: Response) => {
   try {
     const { role } = req.body;
@@ -119,7 +139,7 @@ router.put('/me/sites/:siteId', async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /me/sites/:siteId : Remove a managed site
+// DELETE /me/sites/:siteId: Remove a managed site
 router.delete('/me/sites/:siteId', async (req: Request, res: Response) => {
   try {
     await prisma.userSiteRole.delete({
@@ -134,7 +154,7 @@ router.delete('/me/sites/:siteId', async (req: Request, res: Response) => {
 // --- Owner Site User Management ---
 
 // Middleware to check if current user is owner of the site
-async function checkSiteOwner(req: Request, res: Response, next: Function) {
+async function checkSiteOwner(req: Request, res: Response, next: any) {
   const siteId = req.params.siteId;
   const ownerRole = await prisma.userSiteRole.findUnique({
     where: { userId_siteId: { userId: req.user!.id, siteId } },
@@ -146,7 +166,7 @@ async function checkSiteOwner(req: Request, res: Response, next: Function) {
   next();
 }
 
-// GET /me/sites/:siteId/users : Get all users for a site you own
+// GET /me/sites/:siteId/users: Get all users for a site you own
 router.get('/me/sites/:siteId/users', checkSiteOwner, async (req: Request, res: Response) => {
   try {
     const users = await prisma.userSiteRole.findMany({
@@ -159,30 +179,37 @@ router.get('/me/sites/:siteId/users', checkSiteOwner, async (req: Request, res: 
   }
 });
 
-// POST /me/sites/:siteId/users : Add a user to your site (if exists and not already assigned)
+// POST /me/sites/:siteId/users: Add a user to your site
 router.post('/me/sites/:siteId/users', checkSiteOwner, async (req: Request, res: Response) => {
   try {
     const { userId, role } = req.body;
-    // Check user exists
+    
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found.' });
-    // Check not already assigned
-    const existing = await prisma.userSiteRole.findUnique({ where: { userId_siteId: { userId, siteId: req.params.siteId } } });
+    
+    const existing = await prisma.userSiteRole.findUnique({ 
+      where: { userId_siteId: { userId, siteId: req.params.siteId } } 
+    });
     if (existing) return res.status(400).json({ error: 'User already has a role for this site.' });
-    // Add user
-    const entry = await prisma.userSiteRole.create({ data: { userId, siteId: req.params.siteId, role } });
+    
+    const entry = await prisma.userSiteRole.create({ 
+      data: { userId, siteId: req.params.siteId, role } 
+    });
     res.status(201).json(entry);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
 });
 
-// PUT /me/sites/:siteId/users/:userId : Change a user's role for your site
+// PUT /me/sites/:siteId/users/:userId: Change a user's role for your site
 router.put('/me/sites/:siteId/users/:userId', checkSiteOwner, async (req: Request, res: Response) => {
   try {
     const { role } = req.body;
-    // Only allow CM <-> SM changes
-    if (!['CM', 'SM'].includes(role)) return res.status(400).json({ error: 'Role must be CM or SM.' });
+    
+    if (!['CM', 'SM'].includes(role)) {
+      return res.status(400).json({ error: 'Role must be CM or SM.' });
+    }
+    
     const entry = await prisma.userSiteRole.update({
       where: { userId_siteId: { userId: req.params.userId, siteId: req.params.siteId } },
       data: { role }
@@ -193,7 +220,7 @@ router.put('/me/sites/:siteId/users/:userId', checkSiteOwner, async (req: Reques
   }
 });
 
-// DELETE /me/sites/:siteId/users/:userId : Remove a user from your site
+// DELETE /me/sites/:siteId/users/:userId: Remove a user from your site
 router.delete('/me/sites/:siteId/users/:userId', checkSiteOwner, async (req: Request, res: Response) => {
   try {
     await prisma.userSiteRole.delete({
