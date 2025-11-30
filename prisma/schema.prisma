@@ -1,5 +1,4 @@
 // prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,20 +8,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model UserSiteRole {
-  id      String   @id @default(uuid())
-  user    User     @relation(fields: [userId], references: [id])
-  userId  String
-
-  siteId  String 
-  role    String
-
-  @@unique([userId, siteId])
-}
-
 model User {
-  id              String    @id @default(uuid())
-  email           String    @unique
+  id              String         @id @default(uuid())
+  email           String         @unique
   password        String?
   firstName       String?
   lastName        String?
@@ -32,10 +20,36 @@ model User {
   deletedAt       DateTime?
   externalId      String?
   authUserId      String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  // Relations
   siteRoles       UserSiteRole[]
-
+  refreshTokens   RefreshToken[]
+  
   @@map("users")
+}
+
+model UserSiteRole {
+  id      String   @id @default(uuid())
+  user    User     @relation(fields: [userId], references: [id])
+  userId  String
+  siteId  String 
+  role    String
+  
+  @@unique([userId, siteId])
+  @@map("user_site_roles")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
 }
