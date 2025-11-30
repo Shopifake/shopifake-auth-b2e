@@ -1,37 +1,36 @@
-// src/routes/__tests__/users.test.ts
 import request from 'supertest';
 import express, { Express } from 'express';
 import userRoutes from '../users';
-import { checkAuth } from '../../middleware/checkAuth';
 import { prisma } from '../../lib/prisma.config';
+import jwt from 'jsonwebtoken';
 
-// Mock dependencies
 jest.mock('../../lib/prisma.config');
-jest.mock('../../middleware/checkAuth');
-const mockCheckAuth = checkAuth as jest.MockedFunction<typeof checkAuth>;
 
 describe('User Routes', () => {
   let app: Express;
+  const testUser = {
+    id: 'test-user-id',
+    email: 'test@example.com',
+  };
+  const ACCESS_SECRET = 'test-secret';
 
   beforeEach(() => {
     app = express();
     app.use(express.json());
-    
-    // Mock checkAuth to set req.user
-    mockCheckAuth.mockImplementation((req, res, next) => {
-      req.user = {
-        id: 'test-user-id',
-        email: 'test@example.com',
-      };
-      next();
-    });
-
-    app.use('/api/users', checkAuth, userRoutes);
+    const cookieParser = require('cookie-parser');
+    app.use(cookieParser());
+    process.env.BETTER_AUTH_SECRET = ACCESS_SECRET;
+    app.use('/api/users', userRoutes);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
+
+  function getAuthCookie(user = testUser) {
+    const token = jwt.sign(user, ACCESS_SECRET);
+    return `accessToken=${token}`;
+  }
 
   describe('GET /api/users/me', () => {
     it('should return current user profile', async () => {
@@ -48,7 +47,9 @@ describe('User Routes', () => {
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
 
-      const response = await request(app).get('/api/users/me');
+      const response = await request(app)
+        .get('/api/users/me')
+        .set('Cookie', getAuthCookie());
 
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
@@ -66,7 +67,9 @@ describe('User Routes', () => {
     it('should return 404 when user not found', async () => {
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
 
-      const response = await request(app).get('/api/users/me');
+      const response = await request(app)
+        .get('/api/users/me')
+        .set('Cookie', getAuthCookie());
 
       expect(response.status).toBe(404);
       expect(response.body).toEqual({
@@ -79,7 +82,9 @@ describe('User Routes', () => {
         new Error('Database connection failed')
       );
 
-      const response = await request(app).get('/api/users/me');
+      const response = await request(app)
+        .get('/api/users/me')
+        .set('Cookie', getAuthCookie());
 
       expect(response.status).toBe(500);
       expect(response.body).toHaveProperty('error');
@@ -107,6 +112,7 @@ describe('User Routes', () => {
 
       const response = await request(app)
         .put('/api/users/me')
+        .set('Cookie', getAuthCookie())
         .send(updateData);
 
       expect(response.status).toBe(200);
@@ -140,6 +146,7 @@ describe('User Routes', () => {
 
       const response = await request(app)
         .put('/api/users/me')
+        .set('Cookie', getAuthCookie())
         .send(updateData);
 
       expect(response.status).toBe(200);
@@ -153,6 +160,7 @@ describe('User Routes', () => {
 
       const response = await request(app)
         .put('/api/users/me')
+        .set('Cookie', getAuthCookie())
         .send({ firstName: 'Test' });
 
       expect(response.status).toBe(500);
@@ -173,6 +181,7 @@ describe('User Routes', () => {
 
       const response = await request(app)
         .delete('/api/users/me')
+        .set('Cookie', getAuthCookie())
         .send({ reason: 'No longer need account' });
 
       expect(response.status).toBe(200);
@@ -193,7 +202,9 @@ describe('User Routes', () => {
     it('should handle deletion without reason', async () => {
       (prisma.user.update as jest.Mock).mockResolvedValue({});
 
-      const response = await request(app).delete('/api/users/me');
+      const response = await request(app)
+        .delete('/api/users/me')
+        .set('Cookie', getAuthCookie());
 
       expect(response.status).toBe(200);
     });
