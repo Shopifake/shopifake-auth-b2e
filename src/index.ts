@@ -11,12 +11,12 @@ const PORT = process.env.PORT || 3001;
 
 // --- Middleware ---
 app.use(express.json());
-app.use(cookieParser());  // Make sure this is here!
+app.use(cookieParser());
 app.set('trust proxy', true);
 
 // --- Routes ---
-app.use('/', authRoutes);
-app.use('/users', userRoutes);  // Removed checkAuth
+app.use('/api/auth-b2e', authRoutes);
+app.use('/api/auth-b2e/users', userRoutes);
 
 // --- Healthcheck ---
 app.get('/healthz', async (req, res) => {
