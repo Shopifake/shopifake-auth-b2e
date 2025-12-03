@@ -22,17 +22,21 @@ app.use('/api/auth-b2e/users', userRoutes);
 // --- Healthcheck ---
 app.get('/healthz', async (req, res) => {
   let dbStatus = 'unknown';
+  let dbError = null;
   try {
     await prisma.$queryRaw`SELECT 1`;
     dbStatus = 'available';
-  } catch {
+  } catch (error: any) {
     dbStatus = 'unavailable';
+    dbError = error.message;
+    console.error('❌ Health check failed - Database error:', error.message);
   }
   const isHealthy = dbStatus === 'available';
   res.status(isHealthy ? 200 : 503).json({
     status: isHealthy ? 'UP' : 'DOWN',
     db: dbStatus,
-    service: 'user-auth-service'
+    service: 'user-auth-service',
+    ...(dbError && { error: dbError })
   });
 });
 
