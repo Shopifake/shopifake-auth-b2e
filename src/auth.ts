@@ -9,10 +9,10 @@ const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET!;
 
 // Helper to set cookies
 const setTokens = (res: Response, userId: string, email: string) => {
-  const accessToken = jwt.sign({ id: userId, email }, ACCESS_SECRET, { expiresIn: '15m' });
-  const refreshToken = jwt.sign({ id: userId, type: 'refresh' }, REFRESH_SECRET, { expiresIn: '7d' });
+  const b2e_accessToken = jwt.sign({ id: userId, email }, ACCESS_SECRET, { expiresIn: '15m' });
+  const b2e_refreshToken = jwt.sign({ id: userId, type: 'refresh' }, REFRESH_SECRET, { expiresIn: '7d' });
 
-  res.cookie('b2e_accessToken', accessToken, {
+  res.cookie('b2e_accessToken', b2e_accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
@@ -20,7 +20,7 @@ const setTokens = (res: Response, userId: string, email: string) => {
     path: '/'
   });
 
-  res.cookie('b2e_refreshToken', refreshToken, {
+  res.cookie('b2e_refreshToken', b2e_refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
@@ -28,7 +28,7 @@ const setTokens = (res: Response, userId: string, email: string) => {
     path: '/refresh'
   });
 
-  return refreshToken;
+  return b2e_refreshToken;
 };
 
 // POST /login
@@ -40,11 +40,11 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const refreshToken = setTokens(res, user.id, user.email);
+    const b2e_refreshToken = setTokens(res, user.id, user.email);
 
     // Remove old refresh tokens & store the new one
     await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-    await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) } });
+    await prisma.refreshToken.create({ data: { token: b2e_refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) } });
 
     res.json({ user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName } });
   } catch (error) {
@@ -77,7 +77,7 @@ router.post('/register', async (req: Request, res: Response) => {
 // POST /refresh
 router.post('/refresh', async (req: Request, res: Response) => {
   try {
-    const token = req.cookies.refreshToken;
+    const token = req.cookies.b2e_refreshToken;
     if (!token) return res.status(401).json({ error: 'No refresh token' });
 
     const decoded = jwt.verify(token, REFRESH_SECRET) as any;
@@ -97,7 +97,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
 // POST /logout
 router.post('/logout', async (req: Request, res: Response) => {
   try {
-    const token = req.cookies.refreshToken;
+    const token = req.cookies.b2e_refreshToken;
     if (token) await prisma.refreshToken.deleteMany({ where: { token } });
 
     res.clearCookie('b2e_accessToken').clearCookie('b2e_refreshToken').json({ message: 'Logged out successfully' });
@@ -109,7 +109,7 @@ router.post('/logout', async (req: Request, res: Response) => {
 // GET /me
 router.get('/me', async (req: Request, res: Response) => {
   try {
-    const token = req.cookies.accessToken;
+    const token = req.cookies.b2e_accessToken;
     if (!token) return res.status(401).json({ error: 'Not authenticated' });
 
     const decoded = jwt.verify(token, ACCESS_SECRET) as any;

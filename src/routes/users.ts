@@ -8,7 +8,7 @@ const router = Router();
 // Authentication middleware - extracts user from JWT cookie
 const authenticate = (req: Request, res: Response, next: any) => {
   try {
-    const token = req.cookies.accessToken;
+    const token = req.cookies.b2e_accessToken;
     if (!token) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
