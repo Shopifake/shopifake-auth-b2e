@@ -29,7 +29,7 @@ describe('User Routes', () => {
 
   function getAuthCookie(user = testUser) {
     const token = jwt.sign(user, ACCESS_SECRET);
-    return `accessToken=${token}`;
+    return `b2e_accessToken=${token}`;
   }
 
   describe('GET /api/users/me', () => {

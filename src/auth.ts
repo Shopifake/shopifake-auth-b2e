@@ -12,7 +12,7 @@ const setTokens = (res: Response, userId: string, email: string) => {
   const accessToken = jwt.sign({ id: userId, email }, ACCESS_SECRET, { expiresIn: '15m' });
   const refreshToken = jwt.sign({ id: userId, type: 'refresh' }, REFRESH_SECRET, { expiresIn: '7d' });
 
-  res.cookie('accessToken', accessToken, {
+  res.cookie('b2e_accessToken', accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
@@ -20,7 +20,7 @@ const setTokens = (res: Response, userId: string, email: string) => {
     path: '/'
   });
 
-  res.cookie('refreshToken', refreshToken, {
+  res.cookie('b2e_refreshToken', refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
@@ -100,7 +100,7 @@ router.post('/logout', async (req: Request, res: Response) => {
     const token = req.cookies.refreshToken;
     if (token) await prisma.refreshToken.deleteMany({ where: { token } });
 
-    res.clearCookie('accessToken').clearCookie('refreshToken').json({ message: 'Logged out successfully' });
+    res.clearCookie('b2e_accessToken').clearCookie('b2e_refreshToken').json({ message: 'Logged out successfully' });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
