@@ -16,8 +16,8 @@ app.use(cookieParser());
 app.set('trust proxy', true);
 
 // --- Routes ---
-app.use('/api/auth-b2e', authRoutes);
-app.use('/api/auth-b2e/users', userRoutes);
+app.use('/', authRoutes);
+app.use('/users', userRoutes);
 
 // --- Healthcheck ---
 app.get('/healthz', async (req, res) => {
