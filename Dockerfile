@@ -40,6 +40,7 @@ ENV PORT=3000
 # Copy built files and production dependencies from the 'build' stage
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/prisma ./prisma
 COPY package*.json ./
 # Clean up cache after installing only production dependencies (optional step for cleaner image)
 RUN npm install --production=true && npm cache clean --force
